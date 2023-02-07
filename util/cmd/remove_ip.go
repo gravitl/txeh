@@ -33,13 +33,13 @@ var removeIpCmd = &cobra.Command{
 			fmt.Printf("Removing ip(s) \"%s\"\n", strings.Join(args, " "))
 		}
 
-		RemoveIPs(args)
+		RemoveIPs(args, comment)
 	},
 }
 
-func RemoveIPs(ips []string) {
+func RemoveIPs(ips []string, comment string) {
 
-	etcHosts.RemoveAddresses(ips)
+	etcHosts.RemoveAddresses(ips, comment)
 
 	if DryRun {
 		fmt.Print(etcHosts.RenderHostsFile())
