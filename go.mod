@@ -1,4 +1,4 @@
-module github.com/github/txeh
+module github.com/gravitl/txeh
 
 go 1.12
 
