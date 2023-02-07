@@ -34,11 +34,11 @@ var removeCidrCmd = &cobra.Command{
 			fmt.Printf("Removing ip ranges(s) \"%s\"\n", strings.Join(args, " "))
 		}
 
-		RemoveIPRanges(args)
+		RemoveIPRanges(args, comment)
 	},
 }
 
-func RemoveIPRanges(cidrs []string) {
+func RemoveIPRanges(cidrs []string, comment string) {
 
 	addresses := make([]string, 0)
 
@@ -54,6 +54,14 @@ func RemoveIPRanges(cidrs []string) {
 		hfLines := etcHosts.GetHostFileLines()
 
 		for _, hfl := range *hfLines {
+			// if comment not specifiied and line has comment --skip
+			if comment == "" && hfl.Comment != "" {
+				continue
+			}
+			//if comment specified and comment not equal skip
+			if comment != "" && hfl.Comment != comment {
+				continue
+			}
 
 			ip := net.ParseIP(hfl.Address)
 			if ip != nil {
@@ -65,7 +73,7 @@ func RemoveIPRanges(cidrs []string) {
 
 	}
 
-	etcHosts.RemoveAddresses(addresses)
+	etcHosts.RemoveAddresses(addresses, comment)
 
 	if DryRun {
 		fmt.Print(etcHosts.RenderHostsFile())

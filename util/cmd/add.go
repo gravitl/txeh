@@ -11,6 +11,7 @@ import (
 
 func init() {
 	rootCmd.AddCommand(addCmd)
+	addCmd.Flags().StringP("comment", "c", "", "comment to add to entry")
 }
 
 var addCmd = &cobra.Command{
@@ -36,14 +37,18 @@ var addCmd = &cobra.Command{
 		if !Quiet {
 			fmt.Printf("Adding host(s) \"%s\" to IP address %s\n", strings.Join(args[1:], " "), args[0])
 		}
-
-		AddHosts(args[0], args[1:])
+		comment, err := cmd.Flags().GetString("comment")
+		if err != nil {
+			fmt.Println("error getting flags", err)
+			os.Exit(1)
+		}
+		AddHosts(args[0], args[1:], comment)
 	},
 }
 
-func AddHosts(ip string, hosts []string) {
+func AddHosts(ip string, hosts []string, comment string) {
 
-	etcHosts.AddHosts(ip, hosts)
+	etcHosts.AddHosts(ip, hosts, comment)
 
 	if DryRun {
 		fmt.Print(etcHosts.RenderHostsFile())
