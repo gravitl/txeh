@@ -330,7 +330,7 @@ func ParseHosts(path string) ([]HostFileLine, error) {
 	inputNormalized := strings.Replace(string(input), "\r\n", "\n", -1)
 
 	dataLines := strings.Split(inputNormalized, "\n")
-	//remove extra blank line at end
+	//remove extra blank line at end that does not exist in /etc/hosts file
 	dataLines = dataLines[:len(dataLines)-1]
 	hostFileLines := make([]HostFileLine, len(dataLines))
 

@@ -1,4 +1,4 @@
-module github.com/txn2/txeh
+module github.com/github/txeh
 
 go 1.12
 
