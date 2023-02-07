@@ -7,8 +7,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var comment string
+
 func init() {
 	rootCmd.AddCommand(removeCmd)
+	removeCmd.PersistentFlags().StringVarP(&comment, "comment", "c", "", "comment to add to entry")
 }
 
 var removeCmd = &cobra.Command{

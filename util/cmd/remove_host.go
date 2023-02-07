@@ -33,13 +33,13 @@ var removeHostCmd = &cobra.Command{
 			fmt.Printf("Removing host(s) \"%s\"\n", strings.Join(args, " "))
 		}
 
-		RemoveHosts(args)
+		RemoveHosts(args, comment)
 	},
 }
 
-func RemoveHosts(hosts []string) {
+func RemoveHosts(hosts []string, comment string) {
 
-	etcHosts.RemoveHosts(hosts)
+	etcHosts.RemoveHosts(hosts, comment)
 
 	if DryRun {
 		fmt.Print(etcHosts.RenderHostsFile())

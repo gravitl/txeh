@@ -121,27 +121,35 @@ func (h *Hosts) Reload() error {
 }
 
 // RemoveAddresses removes all entries (lines) with the provided address.
-func (h *Hosts) RemoveAddresses(addresses []string) {
+func (h *Hosts) RemoveAddresses(addresses []string, comment string) {
 	for _, address := range addresses {
-		if h.RemoveFirstAddress(address) {
-			h.RemoveAddress(address)
+		if h.RemoveFirstAddress(address, comment) {
+			h.RemoveAddress(address, comment)
 		}
 	}
 }
 
 // RemoveAddress removes all entries (lines) with the provided address.
-func (h *Hosts) RemoveAddress(address string) {
-	if h.RemoveFirstAddress(address) {
-		h.RemoveAddress(address)
+func (h *Hosts) RemoveAddress(address, comment string) {
+	if h.RemoveFirstAddress(address, comment) {
+		h.RemoveAddress(address, comment)
 	}
 }
 
 // RemoveFirstAddress removed the first entry (line) found with the provided address.
-func (h *Hosts) RemoveFirstAddress(address string) bool {
+func (h *Hosts) RemoveFirstAddress(address, comment string) bool {
 	h.Lock()
 	defer h.Unlock()
 
 	for hflIdx := range h.hostFileLines {
+		// if comment not specifiied and line has comment --skip
+		if comment == "" && h.hostFileLines[hflIdx].Comment != "" {
+			continue
+		}
+		//if comment specified and comment not equal skip
+		if comment != "" && h.hostFileLines[hflIdx].Comment != comment {
+			continue
+		}
 		if address == h.hostFileLines[hflIdx].Address {
 			h.hostFileLines = removeHFLElement(h.hostFileLines, hflIdx)
 			return true
@@ -152,27 +160,35 @@ func (h *Hosts) RemoveFirstAddress(address string) bool {
 }
 
 // RemoveHosts removes all hostname entries of the provided host slice
-func (h *Hosts) RemoveHosts(hosts []string) {
+func (h *Hosts) RemoveHosts(hosts []string, comment string) {
 	for _, host := range hosts {
-		if h.RemoveFirstHost(host) {
-			h.RemoveHost(host)
+		if h.RemoveFirstHost(host, comment) {
+			h.RemoveHost(host, comment)
 		}
 	}
 }
 
 // RemoveHost removes all hostname entries of provided host
-func (h *Hosts) RemoveHost(host string) {
-	if h.RemoveFirstHost(host) {
-		h.RemoveHost(host)
+func (h *Hosts) RemoveHost(host, comment string) {
+	if h.RemoveFirstHost(host, comment) {
+		h.RemoveHost(host, comment)
 	}
 }
 
 // RemoveHost the first hostname entry found and returns true if successful
-func (h *Hosts) RemoveFirstHost(host string) bool {
+func (h *Hosts) RemoveFirstHost(host, comment string) bool {
 	h.Lock()
 	defer h.Unlock()
 
 	for hflIdx := range h.hostFileLines {
+		// if comment not specifiied and line has comment --skip
+		if comment == "" && h.hostFileLines[hflIdx].Comment != "" {
+			continue
+		}
+		//if comment specified and comment not equal skip
+		if comment != "" && h.hostFileLines[hflIdx].Comment != comment {
+			continue
+		}
 		for hidx, hst := range h.hostFileLines[hflIdx].Hostnames {
 			if hst == host {
 				h.hostFileLines[hflIdx].Hostnames = removeStringElement(h.hostFileLines[hflIdx].Hostnames, hidx)
@@ -191,20 +207,20 @@ func (h *Hosts) RemoveFirstHost(host string) bool {
 
 // AddHosts adds an array of hosts to the first matching address it finds
 // or creates the address and adds the hosts
-func (h *Hosts) AddHosts(address string, hosts []string) {
+func (h *Hosts) AddHosts(address string, hosts []string, comment string) {
 	for _, hst := range hosts {
-		h.AddHost(address, hst)
+		h.AddHost(address, hst, comment)
 	}
 }
 
 // AddHost adds a host to an address and removes the host
 // from any existing address is may be associated with
-func (h *Hosts) AddHost(addressRaw string, hostRaw string) {
+func (h *Hosts) AddHost(addressRaw string, hostRaw string, comment string) {
 	host := strings.TrimSpace(strings.ToLower(hostRaw))
 	address := strings.TrimSpace(strings.ToLower(addressRaw))
 
 	// does the host already exist
-	if ok, exAdd, hflIdx := h.HostAddressLookup(host); ok {
+	if ok, exAdd, hflIdx := h.HostAddressLookup(host, comment); ok {
 		// if the address is the same we are done
 		if address == exAdd {
 			return
@@ -249,6 +265,9 @@ func (h *Hosts) AddHost(addressRaw string, hostRaw string) {
 		Address:   address,
 		Hostnames: []string{host},
 	}
+	if comment != "" {
+		hfl.Comment = comment
+	}
 
 	h.Lock()
 	h.hostFileLines = append(h.hostFileLines, hfl)
@@ -257,14 +276,21 @@ func (h *Hosts) AddHost(addressRaw string, hostRaw string) {
 
 // HostAddressLookup returns true is the host is found, a string
 // containing the address and the index of the hfl
-func (h *Hosts) HostAddressLookup(host string) (bool, string, int) {
+func (h *Hosts) HostAddressLookup(host, comment string) (bool, string, int) {
 	h.Lock()
 	defer h.Unlock()
 
 	for i, hfl := range h.hostFileLines {
 		for _, hn := range hfl.Hostnames {
-			if hn == strings.ToLower(host) {
-				return true, hfl.Address, i
+			if comment != "" {
+				if hn == strings.ToLower(host) && hfl.Comment == comment {
+					return true, hfl.Address, i
+				}
+			} else {
+				if hn == strings.ToLower(host) {
+					return true, hfl.Address, i
+				}
+
 			}
 		}
 	}
@@ -304,7 +330,8 @@ func ParseHosts(path string) ([]HostFileLine, error) {
 	inputNormalized := strings.Replace(string(input), "\r\n", "\n", -1)
 
 	dataLines := strings.Split(inputNormalized, "\n")
-
+	//remove extra blank line at end
+	dataLines = dataLines[:len(dataLines)-1]
 	hostFileLines := make([]HostFileLine, len(dataLines))
 
 	// trim leading an trailing whitespace
@@ -377,9 +404,12 @@ func lineFormatter(hfl HostFileLine) string {
 	}
 	return fmt.Sprintf("%-16s %s", hfl.Address, strings.Join(hfl.Hostnames, " "))
 }
+
 // IPLocalhost is a regex pattern for IPv4 or IPv6 loopback range.
 const ipLocalhost = `((127\.([0-9]{1,3}\.){2}[0-9]{1,3})|(::1)$)`
+
 var localhostIPRegexp = regexp.MustCompile(ipLocalhost)
+
 func isLocalhost(address string) bool {
 	return localhostIPRegexp.MatchString(address)
 }
