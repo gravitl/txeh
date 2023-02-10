@@ -214,7 +214,7 @@ func (h *Hosts) AddHosts(address string, hosts []string, comment string) {
 }
 
 // AddHost adds a host to an address and removes the host
-// from any existing address is may be associated with
+// from any existing address is may be associated with iff comment is blank
 func (h *Hosts) AddHost(addressRaw string, hostRaw string, comment string) {
 	host := strings.TrimSpace(strings.ToLower(hostRaw))
 	address := strings.TrimSpace(strings.ToLower(addressRaw))
@@ -227,24 +227,26 @@ func (h *Hosts) AddHost(addressRaw string, hostRaw string, comment string) {
 		}
 
 		// if the hostname is at a different address, go and remove it from the address
-		for hidx, hst := range h.hostFileLines[hflIdx].Hostnames {
-			//for localhost we can match more than one host
-			if isLocalhost(address) {
-				break
-			}
-			if hst == host {
-				h.Lock()
-				h.hostFileLines[hflIdx].Hostnames = removeStringElement(h.hostFileLines[hflIdx].Hostnames, hidx)
-				h.Unlock()
-
-				// remove the address line if empty
-				if len(h.hostFileLines[hflIdx].Hostnames) < 1 {
-					h.Lock()
-					h.hostFileLines = removeHFLElement(h.hostFileLines, hflIdx)
-					h.Unlock()
+		if comment == "" {
+			for hidx, hst := range h.hostFileLines[hflIdx].Hostnames {
+				//for localhost we can match more than one host
+				if isLocalhost(address) {
+					break
 				}
+				if hst == host {
+					h.Lock()
+					h.hostFileLines[hflIdx].Hostnames = removeStringElement(h.hostFileLines[hflIdx].Hostnames, hidx)
+					h.Unlock()
 
-				break // unless we should continue because it could have duplicates
+					// remove the address line if empty
+					if len(h.hostFileLines[hflIdx].Hostnames) < 1 {
+						h.Lock()
+						h.hostFileLines = removeHFLElement(h.hostFileLines, hflIdx)
+						h.Unlock()
+					}
+
+					break // unless we should continue because it could have duplicates
+				}
 			}
 		}
 	}
