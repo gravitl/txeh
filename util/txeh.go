@@ -1,6 +1,6 @@
 package main
 
-import "github.com/txn2/txeh/util/cmd"
+import "github.com/gravitl/txeh/util/cmd"
 
 func main() {
 	cmd.Execute()

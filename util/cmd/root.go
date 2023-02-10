@@ -6,8 +6,8 @@ import (
 	"os"
 	"regexp"
 
+	"github.com/gravitl/txeh"
 	"github.com/spf13/cobra"
-	"github.com/txn2/txeh"
 )
 
 var rootCmd = &cobra.Command{
