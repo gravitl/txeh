@@ -2,8 +2,8 @@ package txeh
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net"
+	"os"
 	"regexp"
 	"runtime"
 	"strings"
@@ -105,7 +105,7 @@ func (h *Hosts) SaveAs(fileName string) error {
 	h.Lock()
 	defer h.Unlock()
 
-	err := ioutil.WriteFile(fileName, hfData, 0644)
+	err := os.WriteFile(fileName, hfData, 0644)
 	if err != nil {
 		return err
 	}
@@ -294,7 +294,7 @@ func (h *Hosts) AddHost(addressRaw string, hostRaw string, comment string) {
 
 // HostAddressLookup returns true is the host is found, a string
 // containing the address and the index of the hfl
-func (h *Hosts) HostAddressLookup(host, ipFamily IPFamily, comment string) (bool, string, int) {
+func (h *Hosts) HostAddressLookup(host string, ipFamily IPFamily, comment string) (bool, string, int) {
 	h.Lock()
 	defer h.Unlock()
 
@@ -349,7 +349,7 @@ func (h *Hosts) GetHostFileLines() *HostFileLines {
 
 // ParseHosts
 func ParseHosts(path string) ([]HostFileLine, error) {
-	input, err := ioutil.ReadFile(path)
+	input, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
