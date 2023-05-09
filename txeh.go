@@ -3,6 +3,7 @@ package txeh
 import (
 	"fmt"
 	"io/ioutil"
+	"net"
 	"regexp"
 	"runtime"
 	"strings"
@@ -13,6 +14,13 @@ const UNKNOWN = 0
 const EMPTY = 10
 const COMMENT = 20
 const ADDRESS = 30
+
+type IPFamily int64
+
+const (
+	IPFamilyV4 IPFamily = iota
+	IPFamilyV6
+)
 
 // HostsConfig
 type HostsConfig struct {
@@ -218,9 +226,17 @@ func (h *Hosts) AddHosts(address string, hosts []string, comment string) {
 func (h *Hosts) AddHost(addressRaw string, hostRaw string, comment string) {
 	host := strings.TrimSpace(strings.ToLower(hostRaw))
 	address := strings.TrimSpace(strings.ToLower(addressRaw))
+	addressIP := net.ParseIP(address)
+	if addressIP == nil {
+		return
+	}
+	ipFamily := IPFamilyV4
+	if addressIP.To4() == nil {
+		ipFamily = IPFamilyV6
+	}
 
 	// does the host already exist
-	if ok, exAdd, hflIdx := h.HostAddressLookup(host, comment); ok {
+	if ok, exAdd, hflIdx := h.HostAddressLookup(host, ipFamily, comment); ok {
 		// if the address is the same we are done
 		if address == exAdd {
 			return
@@ -278,12 +294,22 @@ func (h *Hosts) AddHost(addressRaw string, hostRaw string, comment string) {
 
 // HostAddressLookup returns true is the host is found, a string
 // containing the address and the index of the hfl
-func (h *Hosts) HostAddressLookup(host, comment string) (bool, string, int) {
+func (h *Hosts) HostAddressLookup(host, ipFamily IPFamily, comment string) (bool, string, int) {
 	h.Lock()
 	defer h.Unlock()
 
 	for i, hfl := range h.hostFileLines {
 		for _, hn := range hfl.Hostnames {
+			ipAddr := net.ParseIP(hfl.Address)
+			if ipAddr == nil || hn != strings.ToLower(host) {
+				continue
+			}
+			if ipFamily == IPFamilyV4 && ipAddr.To4() != nil {
+				return true, hfl.Address, i
+			}
+			if ipFamily == IPFamilyV6 && ipAddr.To4() == nil {
+				return true, hfl.Address, i
+			}
 			if comment != "" {
 				if hn == strings.ToLower(host) && hfl.Comment == comment {
 					return true, hfl.Address, i
@@ -292,7 +318,6 @@ func (h *Hosts) HostAddressLookup(host, comment string) (bool, string, int) {
 				if hn == strings.ToLower(host) {
 					return true, hfl.Address, i
 				}
-
 			}
 		}
 	}
@@ -334,6 +359,7 @@ func ParseHosts(path string) ([]HostFileLine, error) {
 	dataLines := strings.Split(inputNormalized, "\n")
 	//remove extra blank line at end that does not exist in /etc/hosts file
 	dataLines = dataLines[:len(dataLines)-1]
+
 	hostFileLines := make([]HostFileLine, len(dataLines))
 
 	// trim leading an trailing whitespace
